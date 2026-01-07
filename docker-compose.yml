@@ -152,3 +152,15 @@ services:
       bash -c "pip install --no-cache-dir streamlit duckdb pandas plotly && 
                streamlit run app.py --server.address=0.0.0.0"
     restart: unless-stopped
+  dbt-docs:
+    image: python:3.10-slim
+    container_name: dbt_docs_server
+    working_dir: /site
+    volumes:
+      # Mount đúng thư mục target nơi chứa file index.html được sinh ra
+      - ./dbt_project/target:/site
+    # Dùng Python để chạy một HTTP server siêu nhẹ
+    command: python -m http.server 8081
+    ports:
+      - "8081:8081"
+    restart: always
