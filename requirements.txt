@@ -1,0 +1,14 @@
+python-dotenv
+boto3
+pyarrow
+pyspark
+duckdb
+pandas
+numpy
+psycopg2-binary
+#apache-airflow-providers-apache-spark
+#apache-airflow-providers-common-sql
+dbt-duckdb
+#apache-airflow-providers-amazon
+streamlit
+plotly

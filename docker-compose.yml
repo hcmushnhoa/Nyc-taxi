@@ -1,0 +1,154 @@
+# Định nghĩa các Volume để lưu trữ dữ liệu lâu dài
+volumes:
+  ny_taxi_postgres_data:
+    driver: local
+  airflow_postgres_data:
+    driver: local
+  minio_data:
+  duckdb_internal:
+# Cấu hình chung cho các service của Airflow để tránh lặp code
+x-airflow-common: &airflow-common
+  build:
+    context: .
+    dockerfile: Dockerfile
+  environment:
+    &airflow-common-env
+    AIRFLOW__CORE__EXECUTOR: LocalExecutor
+    AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@airflow-postgres/airflow
+    AIRFLOW__CORE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@airflow-postgres/airflow
+    AIRFLOW__CORE__FERNET_KEY: ''
+    AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: 'true'
+    AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
+    AIRFLOW__API__AUTH_BACKENDS: 'airflow.api.auth.backend.basic_auth,airflow.api.auth.backend.session'
+    PYTHONPATH: /opt/airflow
+  volumes:
+    - ./dags:/opt/airflow/dags
+    - ./logs:/opt/airflow/logs
+    - ./plugins:/opt/airflow/plugins
+    - duckdb_internal:/opt/airflow/duckdb_data
+    - ./ELT:/opt/airflow/ELT
+    - ./dbt_project:/opt/airflow/dbt_project
+    - ./dbeaver_view:/opt/airflow/export_view
+  user: "${AIRFLOW_UID:-50000}:0"
+  depends_on:
+    &airflow-common-depends-on
+    airflow-postgres:
+      condition: service_healthy
+
+services:
+  pgdatabase:
+    image: postgres:16
+    container_name: ny_taxi_postgres
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: admin
+      POSTGRES_DB: ny_taxi
+    ports:
+      - "5432:5432"
+    volumes:
+      - ny_taxi_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "admin"]
+      interval: 10s
+      retries: 5
+      start_period: 5s
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: pgadmin_container
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@admin.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+    ports:
+      - "8085:80"
+    depends_on:
+      - pgdatabase
+      - airflow-postgres
+  airflow-postgres:
+    image: postgres:16
+    container_name: airflow_postgres
+    environment:
+      POSTGRES_USER: airflow
+      POSTGRES_PASSWORD: airflow
+      POSTGRES_DB: airflow
+    volumes:
+      - airflow_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "airflow"]
+      interval: 10s
+      retries: 5
+      start_period: 5s
+
+  airflow-init:
+    <<: *airflow-common
+    container_name: airflow_init
+    environment:
+      <<: *airflow-common-env
+      _AIRFLOW_DB_MIGRATE: 'true'
+      _AIRFLOW_WWW_USER_CREATE: 'true'
+      _AIRFLOW_WWW_USER_USERNAME: ${_AIRFLOW_WWW_USER_USERNAME:-airflow}
+      _AIRFLOW_WWW_USER_PASSWORD: ${_AIRFLOW_WWW_USER_PASSWORD:-airflow}
+      # Thêm thông tin Admin user trực tiếp vào biến môi trường (Docker Airflow hỗ trợ sẵn)
+      _AIRFLOW_WWW_USER_ROLE: Admin
+      _AIRFLOW_WWW_USER_EMAIL: admin@example.com
+      _AIRFLOW_WWW_USER_FIRSTNAME: Admin
+      _AIRFLOW_WWW_USER_LASTNAME: User
+    # FIX: Đổi command phức tạp thành "version".
+    # Các biến môi trường bên trên sẽ tự động chạy migrate và create user trước khi chạy lệnh này.
+    command: version
+
+  airflow-webserver:
+    <<: *airflow-common
+    container_name: airflow_webserver
+    command: webserver
+    ports:
+      - "8080:8080"
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    depends_on:
+      <<: *airflow-common-depends-on
+      airflow-init:
+        condition: service_completed_successfully
+
+  airflow-scheduler:
+    <<: *airflow-common
+    container_name: airflow_scheduler
+    command: scheduler
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://localhost:8974/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    depends_on:
+      <<: *airflow-common-depends-on
+      airflow-init:
+        condition: service_completed_successfully
+  minio:
+    image: minio/minio:latest
+    container_name: minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minio
+      MINIO_ROOT_PASSWORD: minio123
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+    restart: always
+  dashboard:
+    image: python:3.10-slim  # Dùng image Python chuẩn, không cần build Dockerfile
+    container_name: streamlit_dashboard
+    volumes:
+      - ./dashboard:/app       # Mount code vào
+      - ./dbeaver_view:/data   # Mount dữ liệu từ Airflow vào
+    working_dir: /app
+    ports:
+      - "8501:8501"
+    # Lệnh "thần thánh": Cài thư viện xong mới chạy App
+    command: >
+      bash -c "pip install --no-cache-dir streamlit duckdb pandas plotly && 
+               streamlit run app.py --server.address=0.0.0.0"
+    restart: unless-stopped

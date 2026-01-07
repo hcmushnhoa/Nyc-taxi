@@ -1,0 +1,35 @@
+nyc_dbt:
+  target: dev
+  outputs:
+    prod:
+      type: duckdb
+      # Đường dẫn này khớp với mount path của volume 'duckdb_internal' trong docker-compose
+      path: '/opt/airflow/duckdb_data/nyc_taxi.duckdb'
+      # Cấu hình extension để đọc/ghi file Parquet từ MinIO (nếu cần)
+      extensions:
+        - httpfs
+        - parquet
+      settings:
+        s3_region: 'us-east-1'
+        s3_endpoint: 'minio:9000'
+        s3_access_key_id: 'minio'
+        s3_secret_access_key: 'minio123'
+        s3_use_ssl: false
+        s3_url_style: 'path'
+    dev:
+      type: duckdb
+      # Tạo một file DB riêng để test code ngay trên máy bạn
+      path: '/mnt/d/learn/DE/Taxi_batch/duckdb_storage/nyc_taxi_view.duckdb'
+      extensions:
+        - httpfs
+        - parquet
+      settings:
+        # Khi chạy local, MinIO là localhost chứ không phải "minio"
+        preserve_insertion_order: false  # <--- Dòng này cứu mạng RAM của bạn
+        temp_directory: '/mnt/d/learn/DE/Taxi_batch/duckdb_tmp'
+        s3_region: 'us-east-1'
+        s3_endpoint: 'localhost:9000'
+        s3_access_key_id: 'minio'
+        s3_secret_access_key: 'minio123'
+        s3_use_ssl: false
+        s3_url_style: 'path'

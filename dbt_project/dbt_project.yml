@@ -1,0 +1,22 @@
+name: 'nyc_dbt'
+version: '1.0.0'
+profile: 'nyc_dbt'
+model-paths: ["models"]
+analysis-paths: ["analyses"]
+test-paths: ["tests"]
+seed-paths: ["seeds"]
+macro-paths: ["macros"]
+snapshot-paths: ["snapshots"]
+clean-targets:
+  - "target"
+  - "dbt_packages"
+models:
+  nyc_dbt:
+    staging:
+      #+schema: stg_silver
+      +materialized: view
+    core:
+      #+schema: mart_gold
+      +materialized: table
+vars:
+  payment_type_values: [1, 2, 3, 4, 5, 6]

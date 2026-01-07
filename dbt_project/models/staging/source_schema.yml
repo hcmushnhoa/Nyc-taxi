@@ -1,0 +1,267 @@
+sources:
+  - name: staging
+    database: nyc_taxi
+    schema: main
+    tables:
+      - name: trips_yellow
+      - name: trips_green
+models:
+  - name: stg_green_data
+    description: >
+      Trip made by green taxis, also known as boro taxis and street-hail liveries.
+      Green taxis may respond to street hails,but only in the areas indicated in green on the
+      map (i.e. above W 110 St/E 96th St in Manhattan and in the boroughs).
+      The records were collected and provided to the NYC Taxi and Limousine Commission (TLC) by
+      technology service providers.
+    columns:
+      - name: tripid
+        data_type: varchar
+        description: Primary key for this table, generated with a concatenation of vendorid+pickup_datetime
+        tests:
+          - unique:
+              config:
+                severity: warn
+          - not_null:
+              config:
+                severity: warn
+
+      - name: vendorid
+        data_type: integer
+        description: > 
+                A code indicating the TPEP provider that provided the record.
+                1= Creative Mobile Technologies, LLC; 
+                2= VeriFone Inc.
+
+      - name: count_passenger
+        data_type: integer
+        description: ""
+
+      - name: ratecodeid
+        data_type: integer
+        description: >
+          The final rate code in effect at the end of the trip.
+            1= Standard rate
+            2=JFK
+            3=Newark
+            4=Nassau or Westchester
+            5=Negotiated fare
+            6=Group ride
+
+      - name: pickup_locationid
+        data_type: integer
+        description: ""
+        tests:
+          - relationships:
+              arguments:
+                to: ref('taxi_zone_lookup')
+                field: locationid
+                severity: warn
+
+      - name: dropoff_locationid
+        data_type: integer
+        description: ""
+        tests:
+          - relationships:
+              arguments:
+                to: ref('taxi_zone_lookup')
+                field: locationid
+                severity: warn
+
+
+      - name: pickup_datetime
+        data_type: timestamp
+        description: ""
+
+
+      - name: dropoff_datetime
+        data_type: timestamp
+        description: ""
+
+
+      - name: trip_distance
+        data_type: decimal(18,3)
+        description: ""
+
+      - name: trip_type
+        data_type: integer
+        description: ""
+
+      - name: store_and_fwd_flag
+        data_type: varchar
+        description: ""
+
+      - name: payment_type
+        data_type: integer
+        description: ""
+        tests:
+          - accepted_values:
+              arguments:
+                values: "{{ var('payment_type_values') }}"
+                severity: warn
+                quote: false
+
+      - name: payment_type_describe
+        data_type: varchar
+        description: ""
+
+      - name: fare_amount
+        data_type: decimal(18,3)
+        description: ""
+
+      - name: extra
+        data_type: decimal(18,3)
+        description: ""
+
+      - name: mta_tax
+        data_type: decimal(18,3)
+        description: ""
+
+      - name: tip_amount
+        data_type: decimal(18,3)
+        description: ""
+
+      - name: tolls_amount
+        data_type: decimal(18,3)
+        description: ""
+
+      - name: ehail_fee
+        data_type: decimal(18,3)
+        description: ""
+
+      - name: improvement_surcharge
+        data_type: decimal(18,3)
+        description: ""
+
+      - name: total_amount
+        data_type: decimal(18,3)
+        description: ""
+
+      - name: congestion_surcharge
+        data_type: decimal(18,3)
+        description: ""
+
+  - name: stg_yellow_data
+    description: ""
+    columns:
+      - name: tripid
+        data_type: varchar
+        description: ""
+        tests:
+          - unique:
+              config:
+                severity: warn
+          - not_null:
+              config:
+                severity: warn
+
+      - name: vendorid
+        data_type: integer
+        description: > 
+                A code indicating the TPEP provider that provided the record.
+                1= Creative Mobile Technologies, LLC; 
+                2= VeriFone Inc.
+
+      - name: count_passenger
+        data_type: integer
+        description: ""
+
+      - name: ratecodeid
+        data_type: integer
+        description: >
+                The final rate code in effect at the end of the trip.
+                  1= Standard rate
+                  2=JFK
+                  3=Newark
+                  4=Nassau or Westchester
+                  5=Negotiated fare
+                  6=Group ride
+
+      - name: pickup_locationid
+        data_type: integer
+        description: ""
+        tests:
+          - relationships:
+              arguments:
+                to: ref('taxi_zone_lookup')
+                field: locationid
+                severity: warn
+
+      - name: dropoff_locationid
+        data_type: integer
+        description: ""
+        tests:
+          - relationships:
+              arguments:
+                to: ref('taxi_zone_lookup')
+                field: locationid
+                severity: warn
+
+      - name: pickup_datetime
+        data_type: timestamp
+        description: ""
+
+      - name: dropoff_datetime
+        data_type: timestamp
+        description: ""
+
+      - name: trip_distance
+        data_type: decimal(18,3)
+        description: ""
+
+      - name: trip_type
+        data_type: integer
+        description: ""
+
+      - name: store_and_fwd_flag
+        data_type: varchar
+        description: ""
+
+      - name: payment_type
+        data_type: integer
+        description: ""
+        tests:
+          - accepted_values:
+              arguments:
+                values: "{{ var('payment_type_values') }}"
+                severity: warn
+                quote: false
+
+      - name: payment_type_describe
+        data_type: varchar
+        description: ""
+
+      - name: fare_amount
+        data_type: decimal(18,3)
+        description: ""
+
+      - name: extra
+        data_type: decimal(18,3)
+        description: ""
+
+      - name: mta_tax
+        data_type: decimal(18,3)
+        description: ""
+
+      - name: tip_amount
+        data_type: decimal(18,3)
+        description: ""
+
+      - name: tolls_amount
+        data_type: decimal(18,3)
+        description: ""
+
+      - name: improvement_surcharge
+        data_type: decimal(18,3)
+        description: ""
+
+      - name: total_amount
+        data_type: decimal(18,3)
+        description: ""
+
+      - name: congestion_surcharge
+        data_type: decimal(18,3)
+        description: ""
+
+      - name: airport_fee
+        data_type: decimal(18,3)
+        description: ""
