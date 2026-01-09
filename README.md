@@ -3,9 +3,9 @@
 Dự án là một hệ thống data pipeline ELT (Extract - Load - Transform) 
 toàn diện, được xây dựng để xử lý dữ liệu lịch sử chuyến đi của xe taxi tại 
 New York (NYC TLC Trip Record Data). Hệ thống tập trung vào việc thu thập 
-dữ liệu năm 2024, lưu trữ, chuẩn hóa và phân tích chuyên sâu để đưa ra các 
+dữ liệu lưu trữ, chuẩn hóa và phân tích chuyên sâu để đưa ra các 
 insight về hoạt động vận hành, hành vi khách hàng và doanh thu thông 
-qua Dashboard trực quan.
+qua Dashboard trực quan
 ## **Project Structure**
 ```text
 .
@@ -48,71 +48,51 @@ qua Dashboard trực quan.
 └── requirements.txt
 ```
 ## **Features**
-- Data Ingestion: Tự động crawl dữ liệu chuyến đi (Yellow & Green Taxi) năm 2024
-từ nguồn dữ liệu công khai NYC TLC.
-- Data Lake Storage: Lưu trữ Raw Data trên MinIO (S3 Compatible Object Storage) 
-- đảm bảo khả năng mở rộng.
-- Robust Transformation: Sử dụng dbt-duckdb để biến đổi, làm sạch và kiểm thử dữ liệu (Data Quality Testing) ngay trong quá trình xử lý.
-- Concurrency Management: Quản lý tài nguyên hiệu quả bằng Airflow Pool, cho phép ingest song song nhưng đảm bảo tính toàn vẹn khi ghi vào DuckDB (Single-writer lock)
-- Analytical Data Models: Xây dựng các bảng phân tích chuyên sâu (Core Layer) phục vụ Business Intelligence.
-- Auto Documentation: Tự động sinh tài liệu mô tả ý nghĩa các bảng và trường dữ liệu (Features dictionary).
-- Interactive Visualization: Dashboard tương tác bằng Streamlit để theo dõi các chỉ số kinh doanh chính.
-- Containerized Deployment: Toàn bộ môi trường từ Build Tools, Orchestration đến Storage đều được đóng gói bằng Docker.
+- **Data Ingestion**: Tự động crawl trips data (Yellow & Green Taxi) từ nguồn dữ liệu công khai
+- **Data Lake Storage**: Lưu trữ Raw Data trên MinIO đảm bảo khả năng mở rộng
+- **Robust Transformation**: Sử dụng dbt-duckdb để biến đổi, làm sạch và kiểm thử dữ
+liệu (Data Quality Testing) ngay trong quá trình xử lý
+- **Concurrency Management**: Quản lý tài nguyên hiệu quả bằng Airflow 
+cho phép ingest song song nhưng đảm bảo tính toàn vẹn khi ghi vào DuckDB (Single-writer lock)
+- **Analytical Data Models**: Xây dựng các bảng phân tích chuyên sâu (Core Layer) 
+phục vụ Business Intelligence
+- **Auto Documentation & Visualization**: Tự động sinh tài liệu mô tả ý nghĩa các tables và 
+features dictionary kết hợp dashboard bằng Streamlit để theo dõi chỉ số kinh doanh
+- **Containerized Deployment**: Toàn bộ môi trường từ Build Tools, Orchestration đến Storage đều được đóng gói bằng Docker
 ## **Prerequisites**
--Docker và Docker Compose
-
+- Docker và Docker Compose
 - Python 3.8+
-
 - Airflow 2.10.5
 
 ## **Technical Architecture**
-Sử dụng quy trình ELT kết hợp kiến trúc MEDALLION (Bronze - Silver - Gold) để quản lý luồng dữ liệu:
+Sử dụng quy trình ELT kết hợp kiến trúc MEDALLION (Bronze - Silver - Gold) 
+để quản lý data pipeline :
 
-- Data Collection (Extract):
+- Data Collection (Extract): Thực hiện crawl dữ liệu định dạng Parquet từ website NYC TLC
 
-    - Các script Python thực hiện crawl dữ liệu định dạng Parquet/CSV từ website NYC TLC (chỉ lọc lấy dữ liệu năm 2024).
-
-- Data Staging (Load - Bronze Layer):
-
-  - Dữ liệu thô sau khi tải về được đẩy trực tiếp lên MinIO để lưu trữ lâu dài và làm nguồn (Source of Truth).
+- Data Staging (Load - Bronze Layer): Raw data được đẩy trực tiếp lên MinIO để lưu trữ lâu dài và làm source để truy cập (nếu cần)
 
 - Data Transformation (Silver & Gold Layer):
-
-  - Sử dụng dbt-duckdb để kết nối trực tiếp với MinIO và thực hiện transform.
-
-  - Silver Layer (Staging): Chuẩn hóa kiểu dữ liệu, đổi tên cột, lọc dữ liệu rác. Schema và các rules kiểm thử (Tests: not null, unique, accepted values) được định nghĩa chặt chẽ trong schema.yml.
-
+  - Sử dụng dbt-duckdb để kết nối trực tiếp với MinIO và thực hiện transform
+  - Silver Layer (Staging): Chuẩn hóa và biến đổi data. Schema và các rules kiểm thử  được định nghĩa trong `schema.yml`.
   - Gold Layer (Core): Tạo các bảng Data Mart phục vụ mục đích phân tích cụ thể:
-
-    - Phân tích luồng di chuyển: Xác định các cặp điểm đón-trả khách phổ biến nhất (Origin-Destination).
-
-    - Phân tích hiệu suất vận hành: Tính toán số chuyến, tốc độ trung bình theo khung giờ trong ngày.
-
+    - Phân tích luồng di chuyển: Xác định các cặp điểm đón-trả khách phổ biến nhất (Origin-Destination)
+    - Phân tích hiệu suất vận hành: Tính toán số chuyến, tốc độ trung bình theo khung giờ trong ngày
     - Phân tích hành vi Tips: Đánh giá mức độ tip của khách hàng dựa trên loại hình thanh toán và quãng đường.
-
   - Documentation: dbt tự động generate document mô tả chi tiết các bảng và lineage của dữ liệu.
 
-- Orchestration & Management:
-
-- Apache Airflow điều phối toàn bộ pipeline theo trình tự: Ingest -> Load -> Transform.
+- Orchestration & Management: Apache Airflow điều phối toàn bộ pipeline theo trình tự: Ingest -> Load -> Transform.
 
 - Concurrency Control: Sử dụng cơ chế Pool của Airflow để xử lý bài toán khóa (Lock) của DuckDB:
+  
+  - Task Ingest/Load cho Yellow và Green Taxi chạy song song (Parallel)
+    
+  - Task dbt Transform (ghi vào DuckDB) được xếp hàng đợi (Queue) để chạy tuần tự, tránh lỗi "Database Locked"
+- Export View: Sau khi xử lý xong, file DuckDB (.duckdb) được export ra volume chia sẻ để Streamlit có thể đọc (Read-only)
 
-  - Task Ingest/Load cho Yellow và Green Taxi chạy song song (Parallel).
+- Visualization: Streamlit đọc dữ liệu từ file DuckDB đã xử lý để vẽ các biểu đồ thể hiện 
+xu hướng doanh thu theo tháng, mật độ di chuyển
 
-  - Task dbt Transform (ghi vào DuckDB) được xếp hàng đợi (Queue) để chạy tuần tự, tránh lỗi "Database Locked".
-
-- Export View: Sau khi xử lý xong, file DuckDB (.duckdb) được export ra volume chia sẻ để Streamlit có thể đọc (Read-only).
-
-- Visualization:
-
-  - Streamlit đọc dữ liệu từ file DuckDB đã xử lý để vẽ các biểu đồ:
-
-  - Biểu đồ xu hướng doanh thu theo tháng.
-
-  - Heatmap mật độ di chuyển theo khu vực.
-
-Biểu đồ phân phối tiền Tip trung bình theo loại xe.
 ## **Usage**
 1. Khởi động hệ thống:
 - docker compose up -d --build 
