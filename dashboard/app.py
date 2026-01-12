@@ -13,7 +13,7 @@ DB_PATH = '/data/nyc_taxi_view.duckdb'
 
 
 # 3. Kết nối DB
-@st.cache_resource
+@st.cache_resource # giữ connect sẵn trong cache
 def get_connection():
     con = duckdb.connect(DB_PATH, read_only=True)
     return con
@@ -41,10 +41,7 @@ try:
 
     # --- TẠO TABS ---
     tab1, tab2, tab3 = st.tabs(["📊 Tổng quan Doanh thu", "⏱️ Hiệu suất Vận hành", "🗺️ Tuyến đường & Tip"])
-
-    # ==================================================
     # TAB 1: TỔNG QUAN (Dùng dm_monthly_zone)
-    # ==================================================
     with tab1:
         st.subheader("Doanh thu & Tăng trưởng")
 
@@ -87,12 +84,9 @@ try:
                 fig_zone.update_layout(yaxis={'categoryorder': 'total ascending'})
                 st.plotly_chart(fig_zone, use_container_width=True)
 
-    # ==================================================
     # TAB 2: VẬN HÀNH (Dùng dm_hourly_operation)
-    # ==================================================
     with tab2:
         st.subheader("Phân tích Giờ cao điểm & Tốc độ")
-
         # Load data (Cần kiểm tra bảng này có chưa)
         if 'dm_hourly_operation' in tables['name'].values:
             df_ops = con.sql("SELECT * FROM dm_hourly_operation").df()
@@ -120,9 +114,7 @@ try:
         else:
             st.warning("Chưa tìm thấy bảng `dm_hourly_operation`.")
 
-    # ==================================================
     # TAB 3: TUYẾN ĐƯỜNG & TIP (Dùng dm_origin_destination & dm_tipping)
-    # ==================================================
     with tab3:
         col_route, col_tip = st.columns([1, 1])
 
